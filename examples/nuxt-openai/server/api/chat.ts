@@ -1,18 +1,20 @@
 // ./api/chat.ts
 import { Configuration, OpenAIApi } from 'openai-edge'
-import { OpenAIStream, streamToResponse } from 'ai'
-
-// Create an OpenAI API client (that's edge friendly!)
-const config = new Configuration({
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  apiKey: useRuntimeConfig().openaiApiKey
-})
-const openai = new OpenAIApi(config)
+import { OpenAIStream, StreamingTextResponse, streamToResponse } from 'ai'
+import { defineEventHandler } from 'h3'
 
 export default defineEventHandler(async event => {
-  // Extract the `prompt` from the body of the request
-  const { messages } = await readBody(event)
+  // Create an OpenAI API client (that's edge friendly!)
+  let apiKey = useRuntimeConfig().openaiApiKey as string
+  if (apiKey.length === 0) {
+    apiKey = event.context.cloudflare.env.NUXT_OPENAI_API_KEY
+  }
+  const config = new Configuration({ apiKey })
+  const openai = new OpenAIApi(config)
 
+  // Extract the `prompt` from the body of the request
+  // const { messages } = await readBody(event)
+  const { messages } = await event.request.json()
   // Ask OpenAI for a streaming chat completion given the prompt
   const response = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
@@ -26,5 +28,5 @@ export default defineEventHandler(async event => {
   // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response)
   // Respond with the stream
-  streamToResponse(stream, event.node.res)
+  return new StreamingTextResponse(stream)
 })

@@ -32,7 +32,6 @@
     "ts-jest": "29.0.3",
     "turbo": "^1.10.0"
   },
-  "packageManager": "pnpm@7.15.0",
   "prettier": {
     "tabWidth": 2,
     "semi": false,
@@ -40,5 +39,14 @@
     "singleQuote": true,
     "arrowParens": "avoid",
     "trailingComma": "none"
+  },
+  "pnpm": {
+    "overrides": {
+      "h3": "npm:@hebilicious/h3@latest",
+      "nitropack": "npm:@hebilicious/unstable-nitro@latest"
+    },
+    "patchedDependencies": {
+      "nuxt@3.5.3": "patches/nuxt@3.5.3.patch"
+    }
   }
 }
