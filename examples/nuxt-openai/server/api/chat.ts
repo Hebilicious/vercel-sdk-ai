@@ -3,13 +3,17 @@ import { Configuration, OpenAIApi } from 'openai-edge'
 import { OpenAIStream, streamToResponse } from 'ai'
 
 // Create an OpenAI API client (that's edge friendly!)
-const config = new Configuration({
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  apiKey: useRuntimeConfig().openaiApiKey
-})
-const openai = new OpenAIApi(config)
 
 export default defineEventHandler(async (event: any) => {
+  let apiKey = useRuntimeConfig().openaiApiKey as string
+  if (apiKey.length === 0) {
+    apiKey = event.context.cloudflare.env.NUXT_OPENAI_API_KEY
+  }
+  const config = new Configuration({
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    apiKey
+  })
+  const openai = new OpenAIApi(config)
   // Extract the `prompt` from the body of the request
   const { messages } = await readBody(event)
 
