@@ -1,15 +1,20 @@
 // ./api/chat.ts
 import { Configuration, OpenAIApi } from 'openai-edge'
-import { OpenAIStream, streamToResponse } from 'ai'
+import { OpenAIStream } from 'ai'
+import type { H3Event } from 'h3'
 
-// Create an OpenAI API client (that's edge friendly!)
-const config = new Configuration({
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  apiKey: useRuntimeConfig().openaiApiKey
-})
-const openai = new OpenAIApi(config)
+let openai: OpenAIApi
 
 export default defineEventHandler(async (event: any) => {
+  if (!openai) {
+    let apiKey = useRuntimeConfig().openaiApiKey as string
+    if (apiKey.length === 0) {
+      apiKey = event.context.cloudflare.env.NUXT_OPENAI_API_KEY
+    }
+    const config = new Configuration({ apiKey })
+    openai = new OpenAIApi(config)
+  }
+
   // Extract the `prompt` from the body of the request
   const { messages } = await readBody(event)
 
@@ -26,18 +31,28 @@ export default defineEventHandler(async (event: any) => {
   // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response)
   // Respond with the stream
-  const reader = stream.getReader()
-  return new Promise((resolve, reject) => {
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) {
-          event.node.res.end()
-          return
-        }
-        event.node.res.write(value)
-        read()
-      })
-    }
-    read()
-  })
+  return sendStream(event, stream)
 })
+
+function sendStream(event: H3Event, stream: ReadableStream) {
+  // Mark to prevent h3 handling response
+  event._handled = true
+
+  // Workers (unenv)
+  // @ts-expect-error _data will be there.
+  event.node.res._data = stream
+
+  // Node.js
+  if (event.node.res.socket) {
+    stream.pipeTo(
+      new WritableStream({
+        write(chunk) {
+          event.node.res.write(chunk)
+        },
+        close() {
+          event.node.res.end()
+        }
+      })
+    )
+  }
+}
