@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
   nitro: {
-    preset: 'cloudflare-pages'
+    preset: 'vercel-edge'
   },
   alias: {
     'node:util': path.resolve(
