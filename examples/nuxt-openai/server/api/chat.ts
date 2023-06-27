@@ -8,9 +8,6 @@ let openai: OpenAIApi
 export default defineEventHandler(async (event: any) => {
   if (!openai) {
     let apiKey = useRuntimeConfig().openaiApiKey as string
-    if (apiKey.length === 0) {
-      apiKey = event.context.cloudflare.env.NUXT_OPENAI_API_KEY
-    }
     const config = new Configuration({ apiKey })
     openai = new OpenAIApi(config)
   }
